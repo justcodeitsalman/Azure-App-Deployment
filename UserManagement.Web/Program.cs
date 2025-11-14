@@ -52,6 +52,12 @@ app.MapControllers();
 app.MapRazorPages();      
 app.MapBlazorHub();       
 app.MapFallbackToPage("/_Host"); // ⬅ fallback to Blazor at root
+// 
 
-
+// AUTO MIGRATE DATABASE (creates DB + tables if missing)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<DataContext>();
+    db.Database.Migrate();
+}
 app.Run();

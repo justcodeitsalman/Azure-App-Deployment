@@ -2,24 +2,23 @@ name: Build & Deploy ASP.NET to Azure
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       # ---------------------------
-      # CHECKOUT
+      # CHECKOUT CODE
       # ---------------------------
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       # ---------------------------
       # LOGIN TO AZURE
       # ---------------------------
-      - name: Azure Login
+      - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -27,7 +26,7 @@ jobs:
       # ---------------------------
       # LOGIN TO ACR
       # ---------------------------
-      - name: Login to Azure Container Registry
+      - name: Login to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
@@ -39,26 +38,26 @@ jobs:
       # ---------------------------
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.AZURE_CONTAINER_REGISTRY }}/aspnetapp:${{ github.sha }} .
+          docker build -t ${{ secrets.AZURE_CONTAINER_REGISTRY }}/infloapp:${{ github.sha }} .
 
       # ---------------------------
-      # PUSH IMAGE TO ACR
+      # PUSH TO ACR
       # ---------------------------
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.AZURE_CONTAINER_REGISTRY }}/aspnetapp:${{ github.sha }}
+          docker push ${{ secrets.AZURE_CONTAINER_REGISTRY }}/infloapp:${{ github.sha }}
 
       # ---------------------------
       # DEPLOY TO AZURE WEB APP
       # ---------------------------
-      - name: Deploy to Azure Web App
+      - name: Deploy container to Azure Web App
         uses: azure/webapps-container-deploy@v1
         with:
           app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          images: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/aspnetapp:${{ github.sha }}
+          images: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/infloapp:${{ github.sha }}
 
       # ---------------------------
-      # UPDATE MYSQL CONNECTION STRING
+      # SET MYSQL CONNECTION STRING
       # ---------------------------
       - name: Update MySQL Connection String
         run: |

@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  sqlserver:
+    build:
+      context: ./sqlserver  # <-- folder containing your SQL Dockerfile
+      dockerfile: Dockerfile
+    container_name: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "YourStrong!Passw0rd"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+
+  webapp:
+    build:
+      context: .               # <-- your ASP.NET solution root
+      dockerfile: Dockerfile
+    container_name: webapp
+    depends_on:
+      - sqlserver
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+
+      # Inject your connection string into .NET:
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=UserManagement;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
+
+volumes:
+  sql_data:
