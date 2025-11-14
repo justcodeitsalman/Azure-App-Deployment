@@ -1,0 +1,97 @@
+﻿@page "/users"
+@inject NavigationManager Nav
+@inject IUserService UserService
+
+<h3>User List</h3>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <select class="form-select w-auto d-inline"
+                @onchange="OnFilterChanged">
+            <option value="all">Show All</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive Only</option>
+        </select>
+    </div>
+
+    <button class="btn btn-primary" @onclick="GoToCreate">
+        Add User
+    </button>
+</div>
+
+@if (filtered is null || filtered.Count == 0)
+{
+    <div>No users found.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Forename</th>
+                <th>Surname</th>
+                <th>Email</th>
+                <th>Active</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in filtered)
+            {
+                <tr>
+                    <td>@user.Forename</td>
+                    <td>@user.Surname</td>
+                    <td>@user.Email</td>
+                    <td>@(user.IsActive ? "Yes" : "No")</td>
+                    <td>
+                        <button class="btn btn-sm btn-info"
+                                @onclick="() => GoToView(user.Id)">
+                            View
+                        </button>
+                        <button class="btn btn-sm btn-warning ms-1"
+                                @onclick="() => GoToEdit(user.Id)">
+                            Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger ms-1"
+                                @onclick="() => GoToDelete(user.Id)">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private string filter = "all";
+    private List<User> all = new();
+    private List<User> filtered = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        all = await UserService.GetAllAsync();
+        ApplyFilter();
+    }
+
+    private void OnFilterChanged(ChangeEventArgs e)
+    {
+        filter = e.Value?.ToString() ?? "all";
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        filtered = filter switch
+        {
+            "active"   => all.Where(u => u.IsActive).ToList(),
+            "inactive" => all.Where(u => !u.IsActive).ToList(),
+            _          => all.ToList()
+        };
+    }
+
+    private void GoToCreate() => Nav.NavigateTo("/users/create");
+    private void GoToView(long id) => Nav.NavigateTo($"/users/view/{id}");
+    private void GoToEdit(long id) => Nav.NavigateTo($"/users/edit/{id}");
+    private void GoToDelete(long id) => Nav.NavigateTo($"/users/delete/{id}");
+}

@@ -1,0 +1,69 @@
+﻿@page "/users/edit/{Id:long}"
+@inject IUserService UserService
+@inject NavigationManager Nav
+
+<h3>Edit User</h3>
+
+@if (model == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="@model" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Forename</label>
+            <InputText class="form-control" @bind-Value="model.Forename" />
+            <ValidationMessage For="@(() => model.Forename)" />
+        </div>
+
+        <div class="mb-3">
+            <label>Surname</label>
+            <InputText class="form-control" @bind-Value="model.Surname" />
+            <ValidationMessage For="@(() => model.Surname)" />
+        </div>
+
+        <div class="mb-3">
+            <label>Email</label>
+            <InputText class="form-control" @bind-Value="model.Email" />
+            <ValidationMessage For="@(() => model.Email)" />
+        </div>
+
+        <div class="mb-3">
+            <label>Date of Birth</label>
+            <InputDate class="form-control" @bind-Value="model.DateOfBirth" />
+            <ValidationMessage For="@(() => model.DateOfBirth)" />
+        </div>
+
+        <div class="form-check mb-3">
+            <InputCheckbox class="form-check-input" @bind-Value="model.IsActive" />
+            <label class="form-check-label">Active</label>
+        </div>
+
+        <button class="btn btn-success">Save</button>
+        <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/users"))">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private User? model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await UserService.GetByIdAsync(Id);
+
+        if (model == null)
+            Nav.NavigateTo("/users");
+    }
+
+    private async Task Save()
+    {
+        await UserService.UpdateAsync(model!);
+        Nav.NavigateTo("/users");
+    }
+}

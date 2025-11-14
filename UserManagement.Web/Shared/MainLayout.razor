@@ -1,0 +1,30 @@
+﻿@inherits LayoutComponentBase
+
+<div class="layout-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="avatar">D</div>
+            Dashee
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                    <i class="bi bi-house-door"></i>
+                    Home
+                </NavLink>
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="/users">
+                    <i class="bi bi-people"></i>
+                    User Management
+                </NavLink>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        @Body
+    </main>
+</div>

@@ -1,0 +1,37 @@
+﻿@page "/users/delete/{Id:long}"
+@inject IUserService UserService
+@inject NavigationManager Nav
+
+<h3>Delete User</h3>
+
+@if (user == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <p>Are you sure you want to delete <strong>@user.Forename @user.Surname</strong>?</p>
+
+    <button class="btn btn-danger" @onclick="Delete">Delete</button>
+    <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/users"))">Cancel</button>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private User? user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserService.GetByIdAsync(Id);
+
+        if (user == null)
+            Nav.NavigateTo("/users");
+    }
+
+    private async Task Delete()
+    {
+        await UserService.DeleteAsync(Id);
+        Nav.NavigateTo("/users");
+    }
+}

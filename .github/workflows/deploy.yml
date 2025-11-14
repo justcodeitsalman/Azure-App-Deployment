@@ -1,0 +1,69 @@
+name: Build & Deploy ASP.NET to Azure
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ---------------------------
+      # CHECKOUT
+      # ---------------------------
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # ---------------------------
+      # LOGIN TO AZURE
+      # ---------------------------
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # ---------------------------
+      # LOGIN TO ACR
+      # ---------------------------
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      # ---------------------------
+      # BUILD DOCKER IMAGE
+      # ---------------------------
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.AZURE_CONTAINER_REGISTRY }}/aspnetapp:${{ github.sha }} .
+
+      # ---------------------------
+      # PUSH IMAGE TO ACR
+      # ---------------------------
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.AZURE_CONTAINER_REGISTRY }}/aspnetapp:${{ github.sha }}
+
+      # ---------------------------
+      # DEPLOY TO AZURE WEB APP
+      # ---------------------------
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-container-deploy@v1
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          images: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/aspnetapp:${{ github.sha }}
+
+      # ---------------------------
+      # UPDATE MYSQL CONNECTION STRING
+      # ---------------------------
+      - name: Update MySQL Connection String
+        run: |
+          az webapp config connection-string set \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --settings DefaultConnection="${{ secrets.MYSQL_CONN_STR }}" \
+            --connection-string-type MySql

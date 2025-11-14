@@ -1,0 +1,44 @@
+﻿@page "/users/view/{Id:long}"
+@inject IUserService UserService
+@inject NavigationManager Nav
+
+<h3>User Details</h3>
+
+@if (user == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">Forename</dt>
+        <dd class="col-sm-9">@user.Forename</dd>
+
+        <dt class="col-sm-3">Surname</dt>
+        <dd class="col-sm-9">@user.Surname</dd>
+
+        <dt class="col-sm-3">Email</dt>
+        <dd class="col-sm-9">@user.Email</dd>
+
+        <dt class="col-sm-3">Active</dt>
+        <dd class="col-sm-9">@user.IsActive</dd>
+
+        <dt class="col-sm-3">Date of Birth</dt>
+        <dd class="col-sm-9">@user.DateOfBirth?.ToShortDateString()</dd>
+    </dl>
+
+    <button class="btn btn-secondary" @onclick="@(() => Nav.NavigateTo("/users"))">Back</button>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private User? user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserService.GetByIdAsync(Id);
+        if (user == null)
+            Nav.NavigateTo("/users");
+    }
+}

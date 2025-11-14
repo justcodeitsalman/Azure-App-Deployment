@@ -1,0 +1,52 @@
+﻿@page "/users/create"
+@inject IUserService UserService
+@inject NavigationManager Nav
+
+<h3>Create User</h3>
+
+<EditForm Model="@model" OnValidSubmit="Save">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Forename</label>
+        <InputText class="form-control" @bind-Value="model.Forename" />
+        <ValidationMessage For="@(() => model.Forename)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Surname</label>
+        <InputText class="form-control" @bind-Value="model.Surname" />
+        <ValidationMessage For="@(() => model.Surname)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Email</label>
+        <InputText class="form-control" @bind-Value="model.Email" />
+        <ValidationMessage For="@(() => model.Email)" />
+    </div>
+
+    <div class="mb-3">
+        <label>Date of Birth</label>
+        <InputDate class="form-control" @bind-Value="model.DateOfBirth" />
+        <ValidationMessage For="@(() => model.DateOfBirth)" />
+    </div>
+
+    <div class="form-check mb-3">
+        <InputCheckbox class="form-check-input" @bind-Value="model.IsActive" />
+        <label class="form-check-label">Active</label>
+    </div>
+
+    <button class="btn btn-success">Save</button>
+    <button class="btn btn-secondary ms-2" @onclick="@(() => Nav.NavigateTo("/users"))">Cancel</button>
+</EditForm>
+
+@code {
+    private User model = new();
+
+    private async Task Save()
+    {
+        await UserService.CreateAsync(model);
+        Nav.NavigateTo("/users");
+    }
+}
