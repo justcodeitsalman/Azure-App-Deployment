@@ -76,11 +76,11 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: "6. Run EF Database Migrations (against Azure SQL)"
-      # This step requires the AZURE_SQL_CONNECTION_STRING secret
+      # Crucial fix: We are ensuring EF tool is installed before the update 
+      # and adding --no-build as the project is already built in step 4.
       run: |
         dotnet tool install --global dotnet-ef
-        # Note: The 'dotnet restore' and 'dotnet build' ensure the project metadata is available here.
-        dotnet ef database update --project ${{ env.PROJECT_PATH }} --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+        dotnet ef database update --project ${{ env.PROJECT_PATH }} --no-build --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
       
     - name: "7. Deploy Container to Azure App Service"
       uses: azure/webapps-deploy@v3
