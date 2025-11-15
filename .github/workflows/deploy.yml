@@ -7,9 +7,9 @@ name: Build, Push, and Deploy ASP.NET Container to Azure
 # 4. Update the `env:` variables below with your specific names.
 #
 env:
-  AZURE_WEBAPP_NAME: "aspnet-webapp-prod-inflo"                 # Your App Service Name (Updated)
-  ACR_LOGIN_SERVER: "aspnet-artifact-inflo.azurecr.io"          # Your Azure Container Registry Login Server (Updated)
-  ACR_REPOSITORY: "aspnet-web-app"                              # E.g., 'aspnet-web-app'
+  AZURE_WEBAPP_NAME: "web-app-service-inflo"                 # Your App Service Name (Updated)
+  ACR_LOGIN_SERVER: "aspnetartifactinflo.azurecr.io"          # Your Azure Container Registry Login Server (Updated)
+  ACR_REPOSITORY: "aspnet-artifact-inflo"                              # E.g., 'aspnet-web-app'
   IMAGE_TAG: ${{ github.sha }}                                  # Use the commit SHA for a unique tag
   DOTNET_VERSION: "8.0.x"                                       # Your .NET version for the migration step
   PROJECT_PATH: "UserManagement.Web/UserManagement.Web.csproj"  # CORRECTED: Path to your .csproj for migrations
