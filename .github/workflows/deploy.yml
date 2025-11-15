@@ -76,11 +76,10 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: "6. Run EF Database Migrations (against Azure SQL)"
-      # Crucial fix: We are ensuring EF tool is installed before the update 
-      # and adding --no-build as the project is already built in step 4.
+      # FIX: Added '--configuration Release' to align with the build path from step 4.
       run: |
         dotnet tool install --global dotnet-ef
-        dotnet ef database update --project ${{ env.PROJECT_PATH }} --no-build --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+        dotnet ef database update --project ${{ env.PROJECT_PATH }} --no-build --configuration Release --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
       
     - name: "7. Deploy Container to Azure App Service"
       uses: azure/webapps-deploy@v3
