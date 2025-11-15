@@ -79,12 +79,15 @@ jobs:
         
     - name: "6. Run EF Database Migrations (against Azure SQL)"
       run: |
-        dotnet tool install --global dotnet-ef
+        # Install EF CLI compatible with .NET 8
+        dotnet tool install --global dotnet-ef --version 8.*
 
+        # Run migrations from the Data project using Web as startup
         dotnet ef database update \
-          --project UserManagement.Data/UserManagement.Data.csproj \
-          --startup-project UserManagement.Web/UserManagement.Web.csproj \
-          --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+           --project UserManagement.Data/UserManagement.Data.csproj \
+           --startup-project UserManagement.Web/UserManagement.Web.csproj \
+           --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+
 
     - name: "7. Deploy Container to Azure App Service"
       uses: azure/webapps-deploy@v3
