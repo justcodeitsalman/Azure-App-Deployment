@@ -7,9 +7,9 @@ name: Build, Push, and Deploy ASP.NET Container to Azure
 # 4. Update the `env:` variables below with your specific names.
 #
 env:
-  AZURE_WEBAPP_NAME: "web-app-service-inflo"                 # Your App Service Name (Updated)
-  ACR_LOGIN_SERVER: "aspnetartifactinflo.azurecr.io"          # Your Azure Container Registry Login Server (Updated)
-  ACR_REPOSITORY: "aspnet-artifact-inflo"                              # E.g., 'aspnet-web-app'
+  AZURE_WEBAPP_NAME: "web-app-service-inflo"                    # Your App Service Name (Updated)
+  ACR_LOGIN_SERVER: "aspnetartifactinflo.azurecr.io"            # Your Azure Container Registry Login Server (Updated)
+  ACR_REPOSITORY: "aspnet-artifact-inflo"                       # E.g., 'aspnet-web-app'
   IMAGE_TAG: ${{ github.sha }}                                  # Use the commit SHA for a unique tag
   DOTNET_VERSION: "8.0.x"                                       # Your .NET version for the migration step
   PROJECT_PATH: "UserManagement.Web/UserManagement.Web.csproj"  # CORRECTED: Path to your .csproj for migrations
@@ -67,19 +67,22 @@ jobs:
     - name: "3. Restore project dependencies (REQUIRED for EF migrations to find assets)"
       run: dotnet restore ${{ env.PROJECT_PATH }}
 
-    - name: "4. Login to Azure (for migration and deployment)"
+    - name: "4. Build project (REQUIRED for EF migrations to load design-time assemblies)"
+      run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+    - name: "5. Login to Azure (for migration and deployment)"
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
-    - name: "5. Run EF Database Migrations (against Azure SQL)"
+    - name: "6. Run EF Database Migrations (against Azure SQL)"
       # This step requires the AZURE_SQL_CONNECTION_STRING secret
       run: |
         dotnet tool install --global dotnet-ef
-        # Note: The 'dotnet restore' in step 3 ensures the project metadata is available here.
+        # Note: The 'dotnet restore' and 'dotnet build' ensure the project metadata is available here.
         dotnet ef database update --project ${{ env.PROJECT_PATH }} --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
       
-    - name: "6. Deploy Container to Azure App Service"
+    - name: "7. Deploy Container to Azure App Service"
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
