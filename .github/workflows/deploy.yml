@@ -7,18 +7,18 @@ name: Build, Push, and Deploy ASP.NET Container to Azure
 # 4. Update the `env:` variables below with your specific names.
 #
 env:
-  AZURE_WEBAPP_NAME: "web-app-service-inflo"                    # Your App Service Name
-  ACR_LOGIN_SERVER: "aspnetartifactinflo.azurecr.io"                      # Your Azure Container Registry Login Server
-  ACR_REPOSITORY: "aspnet-artifact-inflo"                              # E.g., 'aspnet-web-app'
+  AZURE_WEBAPP_NAME: "aspnet-webapp-prod-inflo"                 # Your App Service Name (Updated)
+  ACR_LOGIN_SERVER: "aspnet-artifact-inflo.azurecr.io"          # Your Azure Container Registry Login Server (Updated)
+  ACR_REPOSITORY: "aspnet-web-app"                              # E.g., 'aspnet-web-app'
   IMAGE_TAG: ${{ github.sha }}                                  # Use the commit SHA for a unique tag
   DOTNET_VERSION: "8.0.x"                                       # Your .NET version for the migration step
-  PROJECT_PATH: "UserManagement.Web/UserManagement.Web.csproj"            # Path to your .csproj for migrations
+  PROJECT_PATH: "UserManagement.Web/UserManagement.Web.csproj"  # CORRECTED: Path to your .csproj for migrations
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master ] 
   pull_request:
-    branches: [ master ]
+    branches: [ master ] 
 
 jobs:
   build_and_push:
@@ -53,7 +53,7 @@ jobs:
     name: "Run Migrations and Deploy to App Service"
     runs-on: ubuntu-latest
     needs: build_and_push
-    if: github.event_name == 'push' # Only deploy on push to main
+    if: github.event_name == 'push' # Only deploy on push to master
     
     steps:
     - name: "1. Checkout code (required for migrations)"
@@ -64,18 +64,22 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: "3. Login to Azure (for migration and deployment)"
+    - name: "3. Restore project dependencies (REQUIRED for EF migrations to find assets)"
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+
+    - name: "4. Login to Azure (for migration and deployment)"
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
-    - name: "4. Run EF Database Migrations (against Azure SQL)"
+    - name: "5. Run EF Database Migrations (against Azure SQL)"
       # This step requires the AZURE_SQL_CONNECTION_STRING secret
       run: |
         dotnet tool install --global dotnet-ef
+        # Note: The 'dotnet restore' in step 3 ensures the project metadata is available here.
         dotnet ef database update --project ${{ env.PROJECT_PATH }} --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
       
-    - name: "5. Deploy Container to Azure App Service"
+    - name: "6. Deploy Container to Azure App Service"
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
