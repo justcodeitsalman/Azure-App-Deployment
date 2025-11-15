@@ -1,68 +1,85 @@
-name: Build & Deploy ASP.NET to Azure
+name: Build, Push, and Deploy ASP.NET Container to Azure
+
+# CONFIGURATION:
+# 1. Provision ACR, App Service (Linux), and Azure SQL Database.
+# 2. Create the Service Principal and add the JSON output as GitHub Secret `AZURE_CREDENTIALS`.
+# 3. Add the SQL connection string as a secret: `AZURE_SQL_CONNECTION_STRING`.
+# 4. Update the `env:` variables below with your specific names.
+#
+env:
+  AZURE_WEBAPP_NAME: "web-app-service-inflo"                    # Your App Service Name
+  ACR_LOGIN_SERVER: "aspnetartifactinflo.azurecr.io"                      # Your Azure Container Registry Login Server
+  ACR_REPOSITORY: "aspnet-artifact-inflo"                              # E.g., 'aspnet-web-app'
+  IMAGE_TAG: ${{ github.sha }}                                  # Use the commit SHA for a unique tag
+  DOTNET_VERSION: "8.0.x"                                       # Your .NET version for the migration step
+  PROJECT_PATH: "UserManagement.Web/UserManagement.Web.csproj"            # Path to your .csproj for migrations
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  build_and_push:
+    name: "Build, Tag, & Push to ACR"
     runs-on: ubuntu-latest
-
+    
     steps:
-      # ---------------------------
-      # CHECKOUT CODE
-      # ---------------------------
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: "1. Checkout code"
+      uses: actions/checkout@v4
 
-      # ---------------------------
-      # LOGIN TO AZURE
-      # ---------------------------
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: "2. Login to Azure"
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: "3. Docker Login to Azure Container Registry"
+      # We extract the ACR name from the login server for the 'az acr login' command
+      run: az acr login --name $(echo ${{ env.ACR_LOGIN_SERVER }} | cut -d'.' -f1)
 
-      # ---------------------------
-      # LOGIN TO ACR
-      # ---------------------------
-      - name: Login to ACR
-        uses: azure/docker-login@v1
-        with:
-          login-server: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+    - name: "4. Build and tag the Docker image"
+      id: build-image
+      run: |
+        FULL_IMAGE_NAME=${{ env.ACR_LOGIN_SERVER }}/${{ env.ACR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+        # Build the image using the Dockerfile in the root (or adjust path if needed)
+        docker build -t $FULL_IMAGE_NAME .
+        echo "FULL_IMAGE_NAME=$FULL_IMAGE_NAME" >> $GITHUB_ENV
 
-      # ---------------------------
-      # BUILD DOCKER IMAGE
-      # ---------------------------
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.AZURE_CONTAINER_REGISTRY }}/infloapp:${{ github.sha }} .
+    - name: "5. Push Docker image to ACR"
+      run: docker push ${{ env.FULL_IMAGE_NAME }}
 
-      # ---------------------------
-      # PUSH TO ACR
-      # ---------------------------
-      - name: Push Docker image
-        run: |
-          docker push ${{ secrets.AZURE_CONTAINER_REGISTRY }}/infloapp:${{ github.sha }}
+  deploy:
+    name: "Run Migrations and Deploy to App Service"
+    runs-on: ubuntu-latest
+    needs: build_and_push
+    if: github.event_name == 'push' # Only deploy on push to main
+    
+    steps:
+    - name: "1. Checkout code (required for migrations)"
+      uses: actions/checkout@v4
 
-      # ---------------------------
-      # DEPLOY TO AZURE WEB APP
-      # ---------------------------
-      - name: Deploy container to Azure Web App
-        uses: azure/webapps-container-deploy@v1
-        with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          images: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/infloapp:${{ github.sha }}
+    - name: "2. Setup .NET (required for migrations)"
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # ---------------------------
-      # SET MYSQL CONNECTION STRING
-      # ---------------------------
-      - name: Update MySQL Connection String
-        run: |
-          az webapp config connection-string set \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
-            --settings DefaultConnection="${{ secrets.MYSQL_CONN_STR }}" \
-            --connection-string-type MySql
+    - name: "3. Login to Azure (for migration and deployment)"
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: "4. Run EF Database Migrations (against Azure SQL)"
+      # This step requires the AZURE_SQL_CONNECTION_STRING secret
+      run: |
+        dotnet tool install --global dotnet-ef
+        dotnet ef database update --project ${{ env.PROJECT_PATH }} --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+      
+    - name: "5. Deploy Container to Azure App Service"
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        # The 'images' parameter tells App Service which image to pull and deploy
+        images: ${{ env.FULL_IMAGE_NAME }} 
+        # CRITICAL: If App Service needs ACR credentials, you must configure them in the 
+        # Azure Portal under Docker Settings -> Private Registry settings for the App Service.
