@@ -7,7 +7,7 @@ name: Build, Push, and Deploy ASP.NET Container to Azure
 # 4. Update the `env:` variables below with your specific names.
 #
 env:
-  AZURE_WEBAPP_NAME: "web-app-service-inflo"                    # Your App Service Name (Updated)
+  AZURE_WEBAPP_NAME: "aspnet-webapp-prod-inflo"                    # Your App Service Name (Updated)
   ACR_LOGIN_SERVER: "aspnetartifactinflo.azurecr.io"            # Your Azure Container Registry Login Server (Updated)
   ACR_REPOSITORY: "aspnet-artifact-inflo"                       # E.g., 'aspnet-web-app'
   IMAGE_TAG: ${{ github.sha }}                                  # Use the commit SHA for a unique tag
