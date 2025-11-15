@@ -78,24 +78,14 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: "6. Run EF Database Migrations (against Azure SQL)"
-      # FIX: We install the tool, change directory to the project's build output (bin/Release/net8.0),
-      # and then run the EF update command directly from that context.
       run: |
-        # Install EF tool globally
         dotnet tool install --global dotnet-ef
-        
-        # Calculate the directory where the DLL was compiled
-        PROJECT_DIR=$(dirname ${{ env.PROJECT_PATH }})
-        OUTPUT_DIR="$PROJECT_DIR/bin/Release/net8.0"
-        
-        # Change to the output directory
-        echo "Changing directory to: $OUTPUT_DIR"
-        cd $OUTPUT_DIR
-        
-        # Run database update from the correct location.
-        # We must specify the startup assembly when running from the output directory.
-        dotnet ef database update --assembly UserManagement.Web.dll --startup-assembly UserManagement.Web.dll --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
-      
+
+        dotnet ef database update \
+          --project UserManagement.Data/UserManagement.Data.csproj \
+          --startup-project UserManagement.Web/UserManagement.Web.csproj \
+          --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+
     - name: "7. Deploy Container to Azure App Service"
       uses: azure/webapps-deploy@v3
       with:
