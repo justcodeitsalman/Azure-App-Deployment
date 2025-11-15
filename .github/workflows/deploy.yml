@@ -13,7 +13,7 @@ env:
   IMAGE_TAG: ${{ github.sha }}                                  # Use the commit SHA for a unique tag
   DOTNET_VERSION: "8.0.x"                                       # Your .NET version for the migration step
   PROJECT_PATH: "UserManagement.Web/UserManagement.Web.csproj"  # CORRECTED: Path to your .csproj for migrations
-
+  
 on:
   push:
     branches: [ master ] 
@@ -64,10 +64,12 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: "3. Restore project dependencies (REQUIRED for EF migrations to find assets)"
+    - name: "3. Restore project dependencies (REQUIRED for EF migrations)"
+      # The project path is used here for restore
       run: dotnet restore ${{ env.PROJECT_PATH }}
 
-    - name: "4. Build project (REQUIRED for EF migrations to load design-time assemblies)"
+    - name: "4. Build project (REQUIRED for EF migrations to compile dependencies)"
+      # The project path is used here for build
       run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
     - name: "5. Login to Azure (for migration and deployment)"
@@ -76,10 +78,23 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: "6. Run EF Database Migrations (against Azure SQL)"
-      # FIX: Added '--configuration Release' to align with the build path from step 4.
+      # FIX: We install the tool, change directory to the project's build output (bin/Release/net8.0),
+      # and then run the EF update command directly from that context.
       run: |
+        # Install EF tool globally
         dotnet tool install --global dotnet-ef
-        dotnet ef database update --project ${{ env.PROJECT_PATH }} --no-build --configuration Release --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+        
+        # Calculate the directory where the DLL was compiled
+        PROJECT_DIR=$(dirname ${{ env.PROJECT_PATH }})
+        OUTPUT_DIR="$PROJECT_DIR/bin/Release/net8.0"
+        
+        # Change to the output directory
+        echo "Changing directory to: $OUTPUT_DIR"
+        cd $OUTPUT_DIR
+        
+        # Run database update from the correct location.
+        # We must specify the startup assembly when running from the output directory.
+        dotnet ef database update --assembly UserManagement.Web.dll --startup-assembly UserManagement.Web.dll --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
       
     - name: "7. Deploy Container to Azure App Service"
       uses: azure/webapps-deploy@v3
