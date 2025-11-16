@@ -10,11 +10,16 @@ using Westwind.AspNetCore.Markdown;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString =
+    Environment.GetEnvironmentVariable("DefaultConnection") ??
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
+
 // DATABASE
 builder.Services.AddDbContext<DataContext>(options =>
 {
-    var cs = builder.Configuration.GetConnectionString("DefaultConnection");
-    options.UseSqlServer(cs);
+    //var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseSqlServer(connectionString);
 });
 
 
